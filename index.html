@@ -2,27 +2,117 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>JS自作・学習型チャットボット</title>
+  <title>JS自作・学習型チャットプラットフォーム</title>
   <style>
     body {
+      margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background: #111;
       color: #eee;
-      margin: 0;
-      padding: 16px;
     }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 8px;
-    }
-    .container {
+
+    header {
       display: flex;
-      gap: 16px;
+      align-items: center;
+      padding: 8px 12px;
+      background: #181818;
+      border-bottom: 1px solid #333;
     }
-    .left, .right {
+
+    .hamburger {
+      width: 28px;
+      height: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+
+    .hamburger span {
+      display: block;
+      height: 3px;
+      background: #eee;
+      border-radius: 2px;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .app {
+      display: flex;
+      height: calc(100vh - 42px);
+    }
+
+    .sidebar {
+      width: 0;
+      background: #151515;
+      border-right: 1px solid #333;
+      overflow: hidden;
+      transition: width 0.2s ease;
+    }
+
+    .sidebar.open {
+      width: 220px;
+    }
+
+    .sidebar-inner {
+      padding: 8px;
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .menu-section-title {
+      font-size: 12px;
+      color: #888;
+      margin: 8px 0 4px;
+    }
+
+    .menu-item {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #ddd;
+    }
+
+    .menu-item.active {
+      background: #333;
+    }
+
+    .menu-item:hover {
+      background: #262626;
+    }
+
+    .main {
       flex: 1;
-      min-width: 0;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow: auto;
     }
+
+    /* Home（対話）UI */
+    #homeView {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #chatLog {
+      border: 1px solid #444;
+      background: #000;
+      padding: 8px;
+      height: 360px;
+      overflow-y: auto;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
     textarea {
       width: 100%;
       box-sizing: border-box;
@@ -31,318 +121,425 @@
       border: 1px solid #444;
       padding: 8px;
       resize: vertical;
+      font-family: inherit;
+      font-size: 13px;
     }
+
     button {
-      margin-top: 8px;
+      margin-top: 4px;
       padding: 6px 10px;
       border: 1px solid #555;
       background: #222;
       color: #eee;
       cursor: pointer;
+      font-size: 13px;
     }
+
     button:hover {
       background: #333;
     }
-    #chatLog {
-      border: 1px solid #444;
-      background: #000;
-      padding: 8px;
-      height: 400px;
-      overflow-y: auto;
-      font-size: 14px;
-      white-space: pre-wrap;
-    }
+
     .msg-user {
       color: #8fd1ff;
       margin-bottom: 4px;
     }
+
     .msg-bot {
       color: #ffd47f;
       margin-bottom: 8px;
     }
+
     .msg-note {
       color: #9acd32;
       font-size: 12px;
       margin-bottom: 8px;
     }
+
     .small {
       font-size: 12px;
       color: #aaa;
     }
+
     #stats {
-      margin-top: 8px;
+      margin-top: 4px;
       font-size: 12px;
       color: #aaa;
+    }
+
+    @media (max-width: 600px) {
+      .app {
+        flex-direction: row;
+      }
+      .sidebar.open {
+        position: absolute;
+        z-index: 10;
+        height: calc(100vh - 42px);
+      }
     }
   </style>
 </head>
 <body>
-  <h1>JS自作・学習型チャットボット（人力で鍛える奴）</h1>
-  <div class="small">
-    ・会話するほど学習。<br>
-    ・Botの返答がズレてたら下で修正して「修正を学習させる」。<br>
-    ・「古い会話を圧縮」で、過去ログを単語頻度に畳み込みつつ整理。
+<header>
+  <div id="menuToggle" class="hamburger" aria-label="menu">
+    <span></span><span></span><span></span>
   </div>
+  <div class="title">自作AIハブ</div>
+</header>
 
-  <div class="container" style="margin-top:12px;">
-    <div class="left">
+<div class="app">
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+      <div class="menu-section-title">メイン</div>
+      <div class="menu-item active" data-view="home">Home（対話）</div>
+
+      <div class="menu-section-title">拡張（API）</div>
+      <div id="extensionMenu"></div>
+
+      <div style="margin-top:auto;" class="small">
+        JSオンリー / ローカル学習<br>
+        メモリ整理やバックアップは拡張から。
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" class="main">
+    <!-- Home view（対話UIのみ） -->
+    <div id="homeView">
+      <div class="small">
+        ・この画面がメインの対話AI。<br>
+        ・返答がズレてたら下で修正して学習させろ。<br>
+        ・バックアップやWeb学習は左上ハンバーガーから拡張を叩け。
+      </div>
+
+      <div id="chatLog"></div>
+
       <div>
-        <label for="userInput">あなたの入力:</label><br>
+        <label for="userInput" class="small">あなたの入力:</label><br>
         <textarea id="userInput" rows="3"></textarea><br>
         <button id="sendBtn">送信</button>
       </div>
 
-      <div style="margin-top:16px;">
-        <label for="correctionInput">直したいBotの返答があれば修正して入力:</label><br>
-        <textarea id="correctionInput" rows="3" placeholder="ここに正しい返答を書いて「修正を学習させる」を押す"></textarea><br>
-        <button id="applyCorrectionBtn">修正を学習させる（直前のBot発言に適用）</button>
+      <div>
+        <label for="correctionInput" class="small">
+          直したいBotの返答があれば修正して入力（直前の発言に適用）:
+        </label><br>
+        <textarea id="correctionInput" rows="3"
+                  placeholder="ここに正しい返答を書いて「修正を学習させる」を押す"></textarea><br>
+        <button id="applyCorrectionBtn">修正を学習させる</button>
       </div>
 
-      <div style="margin-top:16px;">
-        <button id="compressBtn">古い会話を圧縮（統計に畳み込んで整理）</button>
-        <div id="stats"></div>
-      </div>
+      <div id="stats"></div>
     </div>
 
-    <div class="right">
-      <div>対話ログ:</div>
-      <div id="chatLog"></div>
-    </div>
-  </div>
+    <!-- 拡張ビュー -->
+    <div id="extensionView" style="display:none;"></div>
+  </main>
+</div>
 
-  <script>
-    class Brain {
-      constructor() {
-        this.memory = [];          // 直近の会話ログ（詳細）
-        this.archive = {           // 古い会話の統計
-          tokenFreq: {},           // 単語 -> 累積頻度
-          totalUtterances: 0       // 圧縮に回した発話数
-        };
-        this.nextId = 1;           // 会話ID採番
+<script>
+  // ===== Brain（コアロジック）=====
+  class Brain {
+    constructor() {
+      this.memory = [];          // 直近の会話ログ（詳細）
+      this.archive = {           // 古い会話の統計
+        tokenFreq: {},           // 単語 -> 累積頻度
+        totalUtterances: 0       // 圧縮に回した発話数
+      };
+      this.nextId = 1;           // 会話ID採番
+    }
+
+    tokenize(text) {
+      return text
+        .toLowerCase()
+        .replace(/[^a-z0-9ぁ-んァ-ン一-龠ー\s]/g, " ")
+        .split(/\s+/)
+        .filter(t => t.length > 0);
+    }
+
+    textToVector(text) {
+      const tokens = this.tokenize(text);
+      const vec = {};
+      for (const t of tokens) {
+        vec[t] = (vec[t] || 0) + 1;
       }
+      return vec;
+    }
 
-      // テキスト → トークン配列（かなり雑な分かち書き）
-      tokenize(text) {
-        return text
-          .toLowerCase()
-          .replace(/[^a-z0-9ぁ-んァ-ン一-龠ー\s]/g, " ")
-          .split(/\s+/)
-          .filter(t => t.length > 0);
-      }
+    cosineSimilarity(a, b) {
+      let dot = 0;
+      let na = 0;
+      let nb = 0;
 
-      // テキスト → 単語頻度ベクトル（疎なオブジェクト）
-      textToVector(text) {
-        const tokens = this.tokenize(text);
-        const vec = {};
-        for (const t of tokens) {
-          vec[t] = (vec[t] || 0) + 1;
-        }
-        return vec;
-      }
-
-      // コサイン類似度（疎ベクトル同士）
-      cosineSimilarity(a, b) {
-        let dot = 0;
-        let na = 0;
-        let nb = 0;
-
-        for (const k in a) {
-          const x = a[k];
-          na += x * x;
-          if (k in b) {
-            dot += x * b[k];
-          }
-        }
-        for (const k in b) {
-          const y = b[k];
-          nb += y * y;
-        }
-        if (na === 0 || nb === 0) return 0;
-        return dot / (Math.sqrt(na) * Math.sqrt(nb));
-      }
-
-      // 1往復の会話を記憶し、IDを返す
-      learn(userText, botText) {
-        const vec = this.textToVector(userText);
-        const item = {
-          id: this.nextId++,
-          user: userText,
-          bot: botText,
-          corrected: false,
-          ts: Date.now(),
-          vec
-        };
-        this.memory.push(item);
-        this.save();
-        return item.id;
-      }
-
-      // 人間による「この返答が正解だ」修正
-      learnCorrection(id, correctedBotText) {
-        const item = this.memory.find(m => m.id === id);
-        if (!item) return;
-        item.bot = correctedBotText;
-        item.corrected = true;
-        item.ts = Date.now();  // 更新時刻として上書き
-        this.save();
-      }
-
-      // 似ている過去発話を探す（修正済みログを少し優遇）
-      findNearestReply(userText) {
-        if (this.memory.length === 0) return null;
-        const v = this.textToVector(userText);
-        let best = null;
-        let bestScore = -1;
-        for (const m of this.memory) {
-          const sim = this.cosineSimilarity(v, m.vec);
-          let score = sim;
-          if (m.corrected) score += 0.1;  // 人間が直したものは優先
-          if (score > bestScore) {
-            bestScore = score;
-            best = m;
-          }
-        }
-        if (bestScore < 0.2) return null; // 似てなさすぎたら不採用
-        return best.bot;
-      }
-
-      // 返答ロジック
-      reply(userText) {
-        // 1. シンプルなルール（例）
-        if (userText.includes("疲れた")) {
-          return "疲れたのは分かるが、時間の方がお前に文句言いたいと思ってるぞ。";
-        }
-        if (userText.includes("やる気")) {
-          return "やる気は待つものじゃなくて、作業を始めた副産物だ。さっさと1行やれ。";
-        }
-
-        // 2. 類似した過去会話から借りる
-        const learned = this.findNearestReply(userText);
-        if (learned) return learned;
-
-        // 3. デフォルト
-        return "まだそのパターンは学習してない。お前が修正してくれれば次からは覚える。";
-      }
-
-      // 古いmemoryを圧縮して archive に畳み込む
-      // maxKeep: 詳細ログとして残す最大件数
-      compress(maxKeep = 500) {
-        if (this.memory.length <= maxKeep) return; // まだ圧縮不要
-
-        const excess = this.memory.length - maxKeep;
-        const old = this.memory.slice(0, excess);
-        const keep = this.memory.slice(excess);
-
-        for (const m of old) {
-          const tokensUser = this.tokenize(m.user);
-          const tokensBot  = this.tokenize(m.bot);
-          const tokens = tokensUser.concat(tokensBot);
-          for (const tok of tokens) {
-            this.archive.tokenFreq[tok] = (this.archive.tokenFreq[tok] || 0) + 1;
-          }
-          this.archive.totalUtterances += 1;
-        }
-
-        this.memory = keep;
-        this.save();
-      }
-
-      // localStorage に保存
-      save() {
-        const data = {
-          memory: this.memory,
-          archive: this.archive,
-          nextId: this.nextId
-        };
-        try {
-          localStorage.setItem("my_ai_brain", JSON.stringify(data));
-        } catch (e) {
-          console.error("保存エラー：", e);
+      for (const k in a) {
+        const x = a[k];
+        na += x * x;
+        if (k in b) {
+          dot += x * b[k];
         }
       }
+      for (const k in b) {
+        const y = b[k];
+        nb += y * y;
+      }
+      if (na === 0 || nb === 0) return 0;
+      return dot / (Math.sqrt(na) * Math.sqrt(nb));
+    }
 
-      // localStorage から読み込み
-      load() {
-        const raw = localStorage.getItem("my_ai_brain");
-        if (!raw) return;
-        try {
-          const data = JSON.parse(raw);
-          this.memory = data.memory || [];
-          this.archive = data.archive || { tokenFreq: {}, totalUtterances: 0 };
-          this.nextId = data.nextId || 1;
-        } catch (e) {
-          console.error("ロードエラー：", e);
+    learn(userText, botText) {
+      const vec = this.textToVector(userText);
+      const item = {
+        id: this.nextId++,
+        user: userText,
+        bot: botText,
+        corrected: false,
+        ts: Date.now(),
+        vec
+      };
+      this.memory.push(item);
+      this.save();
+      return item.id;
+    }
+
+    learnCorrection(id, correctedBotText) {
+      const item = this.memory.find(m => m.id === id);
+      if (!item) return;
+      item.bot = correctedBotText;
+      item.corrected = true;
+      item.ts = Date.now();
+      this.save();
+    }
+
+    findNearestReply(userText) {
+      if (this.memory.length === 0) return null;
+      const v = this.textToVector(userText);
+      let best = null;
+      let bestScore = -1;
+      for (const m of this.memory) {
+        const sim = this.cosineSimilarity(v, m.vec);
+        let score = sim;
+        if (m.corrected) score += 0.1;
+        if (score > bestScore) {
+          bestScore = score;
+          best = m;
         }
+      }
+      if (bestScore < 0.2) return null;
+      return best.bot;
+    }
+
+    reply(userText) {
+      if (userText.includes("疲れた")) {
+        return "疲れたのは分かるが、時間の方がお前に文句言いたいと思ってるぞ。";
+      }
+      if (userText.includes("やる気")) {
+        return "やる気は降ってこない。まず1行やれ、それが着火剤だ。";
+      }
+
+      const learned = this.findNearestReply(userText);
+      if (learned) return learned;
+
+      return "まだそのパターンは学習してない。お前が修正してくれれば次からは覚える。";
+    }
+
+    compress(maxKeep = 500) {
+      if (this.memory.length <= maxKeep) return;
+
+      const excess = this.memory.length - maxKeep;
+      const old = this.memory.slice(0, excess);
+      const keep = this.memory.slice(excess);
+
+      for (const m of old) {
+        const tokensUser = this.tokenize(m.user);
+        const tokensBot  = this.tokenize(m.bot);
+        const tokens = tokensUser.concat(tokensBot);
+        for (const tok of tokens) {
+          this.archive.tokenFreq[tok] = (this.archive.tokenFreq[tok] || 0) + 1;
+        }
+        this.archive.totalUtterances += 1;
+      }
+
+      this.memory = keep;
+      this.save();
+    }
+
+    toDataObject() {
+      return {
+        memory: this.memory,
+        archive: this.archive,
+        nextId: this.nextId
+      };
+    }
+
+    fromDataObject(data) {
+      this.memory  = Array.isArray(data.memory) ? data.memory : [];
+      this.archive = data.archive || { tokenFreq: {}, totalUtterances: 0 };
+      this.nextId  = typeof data.nextId === "number" ? data.nextId : 1;
+      this.save();
+    }
+
+    save() {
+      const data = this.toDataObject();
+      try {
+        localStorage.setItem("my_ai_brain", JSON.stringify(data));
+      } catch (e) {
+        console.error("保存エラー：", e);
       }
     }
 
-    // ===== UI連携 =====
-    const brain = new Brain();
-    brain.load();
-
-    const userInput = document.getElementById("userInput");
-    const chatLog = document.getElementById("chatLog");
-    const correctionInput = document.getElementById("correctionInput");
-    const statsDiv = document.getElementById("stats");
-
-    let lastMessageId = null;
-
-    function appendLog(html) {
-      chatLog.innerHTML += html + "\n";
-      chatLog.scrollTop = chatLog.scrollHeight;
+    load() {
+      const raw = localStorage.getItem("my_ai_brain");
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        this.fromDataObject(data);
+      } catch (e) {
+        console.error("ロードエラー：", e);
+      }
     }
+  }
 
-    function updateStats() {
-      const mem = brain.memory.length;
-      const totalUtterances = brain.archive.totalUtterances;
-      const vocabSize = Object.keys(brain.archive.tokenFreq).length;
-      statsDiv.textContent =
-        `詳細ログ: ${mem} 件 / 圧縮済み発話: ${totalUtterances} / 圧縮側語彙数: ${vocabSize}`;
-    }
+  // ===== グローバル：Brain & 拡張登録 =====
+  const brain = new Brain();
+  brain.load();
+  window._brain = brain; // 拡張用
 
+  window.aiExtensions = [];
+  function registerExtension(ext) {
+    // { id, title, init(container, brain) } を期待
+    if (!ext || !ext.id || !ext.title || !ext.init) return;
+    window.aiExtensions.push(ext);
+  }
+  window.registerExtension = registerExtension;
+
+  // ===== HomeビューのUI =====
+  const userInput = document.getElementById("userInput");
+  const chatLog = document.getElementById("chatLog");
+  const correctionInput = document.getElementById("correctionInput");
+  const statsDiv = document.getElementById("stats");
+
+  const homeView = document.getElementById("homeView");
+  const extView = document.getElementById("extensionView");
+
+  let lastMessageId = null;
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function appendLog(html) {
+    chatLog.innerHTML += html + "\n";
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function updateStats() {
+    const mem = brain.memory.length;
+    const totalUtterances = brain.archive.totalUtterances;
+    const vocabSize = Object.keys(brain.archive.tokenFreq).length;
+    statsDiv.textContent =
+      `詳細ログ: ${mem} 件 / 圧縮済み発話: ${totalUtterances} / 圧縮側語彙数: ${vocabSize}`;
+  }
+  updateStats();
+  window._updateStats = updateStats; // 拡張側からも呼べるように
+
+  document.getElementById("sendBtn").addEventListener("click", () => {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    const botText = brain.reply(text);
+    const id = brain.learn(text, botText);
+    lastMessageId = id;
+
+    appendLog(`🧑 <span class="msg-user">${escapeHtml(text)}</span>`);
+    appendLog(`🤖 <span class="msg-bot">${escapeHtml(botText)}</span>`);
+
+    userInput.value = "";
     updateStats();
+  });
 
-    document.getElementById("sendBtn").addEventListener("click", () => {
-      const text = userInput.value.trim();
-      if (!text) return;
+  document.getElementById("applyCorrectionBtn").addEventListener("click", () => {
+    const corrected = correctionInput.value.trim();
+    if (!corrected || lastMessageId == null) return;
 
-      const botText = brain.reply(text);
-      const id = brain.learn(text, botText);
-      lastMessageId = id;
+    brain.learnCorrection(lastMessageId, corrected);
 
-      appendLog(`🧑 <span class="msg-user">${escapeHtml(text)}</span>`);
-      appendLog(`🤖 <span class="msg-bot">${escapeHtml(botText)}</span>`);
+    appendLog(`✏️ <span class="msg-note">直前のBot返答を修正学習: ${escapeHtml(corrected)}</span>`);
+    correctionInput.value = "";
+    updateStats();
+  });
 
-      userInput.value = "";
-      updateStats();
+  // ===== ハンバーガー & メニュー =====
+  const sidebar = document.getElementById("sidebar");
+  const menuToggle = document.getElementById("menuToggle");
+  const extMenu = document.getElementById("extensionMenu");
+
+  menuToggle.addEventListener("click", () => {
+    sidebar.classList.toggle("open");
+  });
+
+  function setActiveMenuItem(el) {
+    document.querySelectorAll(".menu-item").forEach(item => {
+      item.classList.remove("active");
     });
+    el.classList.add("active");
+  }
 
-    document.getElementById("applyCorrectionBtn").addEventListener("click", () => {
-      const corrected = correctionInput.value.trim();
-      if (!corrected || lastMessageId == null) return;
+  function showHome() {
+    homeView.style.display = "";
+    extView.style.display = "none";
+  }
 
-      brain.learnCorrection(lastMessageId, corrected);
+  function showExtension(ext) {
+    homeView.style.display = "none";
+    extView.style.display = "";
+    extView.innerHTML = "";
+    ext.init(extView, brain);
+  }
 
-      appendLog(`✏️ <span class="msg-note">直前のBot返答を修正学習: ${escapeHtml(corrected)}</span>`);
-      correctionInput.value = "";
-      updateStats();
+  // 初期表示
+  showHome();
+
+  // Homeメニュー
+  document.querySelector('.menu-item[data-view="home"]').addEventListener("click", (e) => {
+    setActiveMenuItem(e.currentTarget);
+    showHome();
+    sidebar.classList.remove("open");
+  });
+
+  // 拡張メニュー生成
+  function buildExtensionMenu() {
+    extMenu.innerHTML = "";
+    window.aiExtensions.forEach(ext => {
+      const item = document.createElement("div");
+      item.className = "menu-item";
+      item.textContent = ext.title;
+      item.dataset.extId = ext.id;
+      item.addEventListener("click", () => {
+        setActiveMenuItem(item);
+        showExtension(ext);
+        sidebar.classList.remove("open");
+      });
+      extMenu.appendChild(item);
     });
+  }
+  window._buildExtensionMenu = buildExtensionMenu;
+</script>
 
-    document.getElementById("compressBtn").addEventListener("click", () => {
-      brain.compress(500); // 最新500件だけ詳細ログとして残す
-      updateStats();
-      alert("古い会話を圧縮して統計に畳み込んだ。黒歴史の一部がログから消えたが、語彙としては生き残っている。");
-    });
+<!-- API拡張読み込み -->
+<script src="api/localDataManager.js"></script>
+<script src="api/webTrainer.js"></script>
 
-    // シンプルなXSS対策用エスケープ
-    function escapeHtml(str) {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-  </script>
+<script>
+  // 拡張読み込み後にメニュー構築
+  if (window._buildExtensionMenu) {
+    window._buildExtensionMenu();
+  }
+</script>
+
 </body>
 </html>
+
