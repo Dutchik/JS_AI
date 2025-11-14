@@ -16,9 +16,7 @@
       --text-sub: #aaa;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -97,13 +95,8 @@
       transition: background 0.15s;
     }
 
-    .menu-item.active {
-      background: #333;
-    }
-
-    .menu-item:hover {
-      background: #262626;
-    }
+    .menu-item.active { background: #333; }
+    .menu-item:hover { background: #262626; }
 
     .sidebar-footer {
       margin-top: auto;
@@ -163,39 +156,15 @@
       border-radius: 4px;
     }
 
-    button:hover {
-      background: #333;
-    }
+    button:hover { background: #333; }
 
-    .msg-user {
-      color: #8fd1ff;
-      margin-bottom: 4px;
-    }
+    .msg-user  { color: #8fd1ff; margin-bottom: 4px; }
+    .msg-bot   { color: #ffd47f; margin-bottom: 8px; }
+    .msg-note  { color: #9acd32; font-size: 12px; margin-bottom: 8px; }
+    .small     { font-size: 12px; color: var(--text-sub); }
+    #stats     { margin-top: 4px; font-size: 12px; color: var(--text-sub); }
 
-    .msg-bot {
-      color: #ffd47f;
-      margin-bottom: 8px;
-    }
-
-    .msg-note {
-      color: #9acd32;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .small {
-      font-size: 12px;
-      color: var(--text-sub);
-    }
-
-    #stats {
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--text-sub);
-    }
-
-    #extensionView {
-    }
+    #extensionView {}
 
     .model-row {
       display: flex;
@@ -214,9 +183,7 @@
     }
 
     @media (max-width: 900px) {
-      .app {
-        position: relative;
-      }
+      .app { position: relative; }
 
       .sidebar {
         position: absolute;
@@ -228,30 +195,16 @@
         z-index: 10;
       }
 
-      .sidebar.open {
-        width: var(--sidebar-w);
-      }
+      .sidebar.open { width: var(--sidebar-w); }
 
-      .main {
-        padding: 8px;
-      }
-
-      .main-inner {
-        max-width: 100%;
-      }
-
-      #chatLog {
-        height: 55vh;
-      }
+      .main { padding: 8px; }
+      .main-inner { max-width: 100%; }
+      #chatLog { height: 55vh; }
     }
 
     @media (min-width: 901px) {
-      .sidebar {
-        width: var(--sidebar-w);
-      }
-      .sidebar.open {
-        width: var(--sidebar-w);
-      }
+      .sidebar { width: var(--sidebar-w); }
+      .sidebar.open { width: var(--sidebar-w); }
     }
   </style>
 </head>
@@ -274,7 +227,7 @@
 
       <div class="sidebar-footer">
         JSオンリー / モデル差し替え制<br>
-        モデルは models/ 配下のJSで追加。
+        モデルは models/ のJSで追加。
       </div>
     </div>
   </nav>
@@ -285,8 +238,8 @@
         <div class="small">
           ・この画面がメインの対話AI。<br>
           ・返答がズレてたら下で修正して学習させろ。<br>
-          ・モデルは下のプルダウンから切り替え。<br>
-          ・新しいモデルは models/ にJSファイルを置いて registerModel すれば追加可能。
+          ・モデルはプルダウンで切り替え可能。<br>
+          ・新しいモデルは models/ にJSを置いて registerModel すれば追加される。
         </div>
 
         <div class="model-row">
@@ -321,16 +274,16 @@
 </div>
 
 <script>
-  // ===== モデル登録まわり =====
+  // ===== モデル登録 =====
   window.aiModels = [];
   function registerModel(def) {
-    // { id, name, description, createInstance(storageKey?) }
+    // { id, name, description, createInstance(storageKey) }
     if (!def || !def.id || !def.name || !def.createInstance) return;
     window.aiModels.push(def);
   }
   window.registerModel = registerModel;
 
-  // ===== 拡張登録まわり =====
+  // ===== 拡張登録 =====
   window.aiExtensions = [];
   function registerExtension(ext) {
     if (!ext || !ext.id || !ext.title || !ext.init) return;
@@ -342,14 +295,14 @@
   let brain = null;
   let currentModelId = null;
 
-  const userInput = document.getElementById("userInput");
-  const chatLog = document.getElementById("chatLog");
+  const userInput       = document.getElementById("userInput");
+  const chatLog         = document.getElementById("chatLog");
   const correctionInput = document.getElementById("correctionInput");
-  const statsDiv = document.getElementById("stats");
-  const homeView = document.getElementById("homeView");
-  const extView = document.getElementById("extensionView");
-  const modelSelect = document.getElementById("modelSelect");
-  const modelInfo = document.getElementById("modelInfo");
+  const statsDiv        = document.getElementById("stats");
+  const homeView        = document.getElementById("homeView");
+  const extView         = document.getElementById("extensionView");
+  const modelSelect     = document.getElementById("modelSelect");
+  const modelInfo       = document.getElementById("modelInfo");
 
   let lastMessageId = null;
 
@@ -372,12 +325,13 @@
       statsDiv.textContent = "モデル未選択";
       return;
     }
-    const mem = brain.memory ? brain.memory.length : 0;
-    const archive = brain.archive || { totalUtterances: 0, tokenFreq: {} };
-    const totalUtterances = archive.totalUtterances || 0;
-    const vocabSize = archive.tokenFreq ? Object.keys(archive.tokenFreq).length : 0;
+    const mem      = brain.memory ? brain.memory.length : 0;
+    const archive  = brain.archive || { totalUtterances: 0, tokenFreq: {} };
+    const total    = archive.totalUtterances || 0;
+    const vocab    = archive.tokenFreq ? Object.keys(archive.tokenFreq).length : 0;
+
     statsDiv.textContent =
-      `モデル: ${currentModelId || "なし"} / 詳細ログ: ${mem} 件 / 圧縮済み発話: ${totalUtterances} / 圧縮側語彙数: ${vocabSize}`;
+      `モデル: ${currentModelId || "なし"} / 詳細ログ: ${mem} 件 / 圧縮済み発話: ${total} / 圧縮側語彙数: ${vocab}`;
   }
   window._updateStats = updateStats;
 
@@ -411,7 +365,6 @@
       return;
     }
     currentModelId = def.id;
-    // ストレージキーはモデルIDで区別
     const storageKey = "my_ai_brain_" + def.id;
     brain = def.createInstance(storageKey);
     window._brain = brain;
@@ -424,7 +377,7 @@
     switchModel(id);
   });
 
-  // ===== HomeのUIイベント =====
+  // ===== Home UI =====
   document.getElementById("sendBtn").addEventListener("click", () => {
     if (!brain) {
       appendLog(`⚠️ <span class="msg-note">モデルが選択されていない。まず上でモデルを選べ。</span>`);
@@ -450,39 +403,36 @@
     if (!corrected || lastMessageId == null) return;
 
     brain.learnCorrection(lastMessageId, corrected);
-
     appendLog(`✏️ <span class="msg-note">直前のBot返答を修正学習: ${escapeHtml(corrected)}</span>`);
     correctionInput.value = "";
     updateStats();
   });
 
-  // ===== ハンバーガー／メニュー =====
-  const sidebar = document.getElementById("sidebar");
+  // ===== サイドバー・拡張 =====
+  const sidebar  = document.getElementById("sidebar");
   const menuToggle = document.getElementById("menuToggle");
-  const extMenu = document.getElementById("extensionMenu");
+  const extMenu  = document.getElementById("extensionMenu");
 
   menuToggle.addEventListener("click", () => {
     sidebar.classList.toggle("open");
   });
 
   function setActiveMenuItem(el) {
-    document.querySelectorAll(".menu-item").forEach(item => {
-      item.classList.remove("active");
-    });
+    document.querySelectorAll(".menu-item").forEach(item => item.classList.remove("active"));
     el.classList.add("active");
   }
 
   function showHome() {
     homeView.style.display = "";
-    extView.style.display = "none";
+    extView.style.display  = "none";
   }
 
   function showExtension(ext) {
     homeView.style.display = "none";
-    extView.style.display = "";
-    extView.innerHTML = "";
+    extView.style.display  = "";
+    extView.innerHTML      = "";
     if (!brain) {
-      extView.innerHTML = `<div class="small">まずモデルを選べ。脳みそがないと拡張も何もない。</div>`;
+      extView.innerHTML = `<div class="small">まずモデルを選べ。脳みそがないと拡張も動かない。</div>`;
       return;
     }
     ext.init(extView, brain);
@@ -514,20 +464,19 @@
   window._buildExtensionMenu = buildExtensionMenu;
 </script>
 
-<!-- モデル群を読み込む：ここに新しい models/*.js を追加していく -->
-<script src="models/semantic_brain_v1.js"></script>
-<!-- 他にモデルを作ったら、たとえば
+<!-- ▼ モデル群：ここに models/*.js を追加していく ▼ -->
 <script src="models/simple_bow_v1.js"></script>
-みたいに足していけばいい -->
+<script src="models/semantic_brain_v1.js"></script>
+<!-- 追加モデルは同じように1行足すだけ -->
 
-<!-- API拡張類（前に作ったやつをそのまま） -->
+<!-- ▼ API拡張類（既存のやつ） ▼ -->
 <script src="api/localDataManager.js"></script>
 <script src="api/webTrainer.js"></script>
 <script src="api/datasetUploader.js"></script>
 <script src="api/dataCatalog.js"></script>
 
 <script>
-  // モデル・拡張読み込み後の初期セットアップ
+  // 初期セットアップ
   rebuildModelSelect();
   if (window.aiModels.length > 0) {
     modelSelect.value = window.aiModels[0].id;
