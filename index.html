@@ -3,20 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <title>JS自作・学習型チャットプラットフォーム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    :root {
+      --header-h: 48px;
+      --sidebar-w: 230px;
+      --bg: #111;
+      --bg-elevated: #181818;
+      --border: #333;
+      --border-soft: #444;
+      --text-main: #eee;
+      --text-sub: #aaa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #111;
-      color: #eee;
+      background: var(--bg);
+      color: var(--text-main);
     }
 
     header {
       display: flex;
       align-items: center;
       padding: 8px 12px;
-      background: #181818;
-      border-bottom: 1px solid #333;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      height: var(--header-h);
     }
 
     .hamburger {
@@ -32,7 +49,7 @@
     .hamburger span {
       display: block;
       height: 3px;
-      background: #eee;
+      background: var(--text-main);
       border-radius: 2px;
     }
 
@@ -43,25 +60,23 @@
 
     .app {
       display: flex;
-      height: calc(100vh - 42px);
+      height: calc(100vh - var(--header-h));
+      overflow: hidden;
     }
 
     .sidebar {
-      width: 0;
+      width: var(--sidebar-w);
       background: #151515;
-      border-right: 1px solid #333;
+      border-right: 1px solid var(--border);
       overflow: hidden;
       transition: width 0.2s ease;
-    }
-
-    .sidebar.open {
-      width: 220px;
+      flex-shrink: 0;
+      position: relative;
     }
 
     .sidebar-inner {
       padding: 8px;
       height: 100%;
-      box-sizing: border-box;
       display: flex;
       flex-direction: column;
     }
@@ -79,6 +94,7 @@
       border-radius: 4px;
       cursor: pointer;
       color: #ddd;
+      transition: background 0.15s;
     }
 
     .menu-item.active {
@@ -89,14 +105,25 @@
       background: #262626;
     }
 
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
     .main {
       flex: 1;
       padding: 10px;
-      box-sizing: border-box;
       overflow: auto;
+      display: flex;
+      justify-content: center;
     }
 
-    /* Home（対話）UI */
+    .main-inner {
+      width: 100%;
+      max-width: 960px;
+    }
+
     #homeView {
       display: flex;
       flex-direction: column;
@@ -104,10 +131,10 @@
     }
 
     #chatLog {
-      border: 1px solid #444;
+      border: 1px solid var(--border-soft);
       background: #000;
       padding: 8px;
-      height: 360px;
+      height: 420px;
       overflow-y: auto;
       font-size: 14px;
       white-space: pre-wrap;
@@ -115,14 +142,14 @@
 
     textarea {
       width: 100%;
-      box-sizing: border-box;
       background: #222;
-      color: #eee;
-      border: 1px solid #444;
+      color: var(--text-main);
+      border: 1px solid var(--border-soft);
       padding: 8px;
       resize: vertical;
       font-family: inherit;
       font-size: 13px;
+      border-radius: 4px;
     }
 
     button {
@@ -130,9 +157,10 @@
       padding: 6px 10px;
       border: 1px solid #555;
       background: #222;
-      color: #eee;
+      color: var(--text-main);
       cursor: pointer;
       font-size: 13px;
+      border-radius: 4px;
     }
 
     button:hover {
@@ -157,23 +185,72 @@
 
     .small {
       font-size: 12px;
-      color: #aaa;
+      color: var(--text-sub);
     }
 
     #stats {
       margin-top: 4px;
       font-size: 12px;
-      color: #aaa;
+      color: var(--text-sub);
     }
 
-    @media (max-width: 600px) {
+    #extensionView {
+    }
+
+    .model-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    select {
+      background: #222;
+      color: var(--text-main);
+      border: 1px solid var(--border-soft);
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
       .app {
-        flex-direction: row;
+        position: relative;
+      }
+
+      .sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 0;
+        box-shadow: 0 0 20px rgba(0,0,0,0.6);
+        z-index: 10;
+      }
+
+      .sidebar.open {
+        width: var(--sidebar-w);
+      }
+
+      .main {
+        padding: 8px;
+      }
+
+      .main-inner {
+        max-width: 100%;
+      }
+
+      #chatLog {
+        height: 55vh;
+      }
+    }
+
+    @media (min-width: 901px) {
+      .sidebar {
+        width: var(--sidebar-w);
       }
       .sidebar.open {
-        position: absolute;
-        z-index: 10;
-        height: calc(100vh - 42px);
+        width: var(--sidebar-w);
       }
     }
   </style>
@@ -195,230 +272,84 @@
       <div class="menu-section-title">拡張（API）</div>
       <div id="extensionMenu"></div>
 
-      <div style="margin-top:auto;" class="small">
-        JSオンリー / ローカル学習<br>
-        メモリ整理やバックアップは拡張から。
+      <div class="sidebar-footer">
+        JSオンリー / モデル差し替え制<br>
+        モデルは models/ 配下のJSで追加。
       </div>
     </div>
   </nav>
 
   <main id="main" class="main">
-    <!-- Home view（対話UIのみ） -->
-    <div id="homeView">
-      <div class="small">
-        ・この画面がメインの対話AI。<br>
-        ・返答がズレてたら下で修正して学習させろ。<br>
-        ・バックアップやWeb学習は左上ハンバーガーから拡張を叩け。
+    <div class="main-inner">
+      <div id="homeView">
+        <div class="small">
+          ・この画面がメインの対話AI。<br>
+          ・返答がズレてたら下で修正して学習させろ。<br>
+          ・モデルは下のプルダウンから切り替え。<br>
+          ・新しいモデルは models/ にJSファイルを置いて registerModel すれば追加可能。
+        </div>
+
+        <div class="model-row">
+          <span class="small">使用モデル:</span>
+          <select id="modelSelect"></select>
+          <span id="modelInfo" class="small"></span>
+        </div>
+
+        <div id="chatLog"></div>
+
+        <div>
+          <label for="userInput" class="small">あなたの入力:</label><br>
+          <textarea id="userInput" rows="3"></textarea><br>
+          <button id="sendBtn">送信</button>
+        </div>
+
+        <div>
+          <label for="correctionInput" class="small">
+            直したいBotの返答があれば修正して入力（直前の発言に適用）:
+          </label><br>
+          <textarea id="correctionInput" rows="3"
+                    placeholder="ここに正しい返答を書いて「修正を学習させる」を押す"></textarea><br>
+          <button id="applyCorrectionBtn">修正を学習させる</button>
+        </div>
+
+        <div id="stats"></div>
       </div>
 
-      <div id="chatLog"></div>
-
-      <div>
-        <label for="userInput" class="small">あなたの入力:</label><br>
-        <textarea id="userInput" rows="3"></textarea><br>
-        <button id="sendBtn">送信</button>
-      </div>
-
-      <div>
-        <label for="correctionInput" class="small">
-          直したいBotの返答があれば修正して入力（直前の発言に適用）:
-        </label><br>
-        <textarea id="correctionInput" rows="3"
-                  placeholder="ここに正しい返答を書いて「修正を学習させる」を押す"></textarea><br>
-        <button id="applyCorrectionBtn">修正を学習させる</button>
-      </div>
-
-      <div id="stats"></div>
+      <div id="extensionView" style="display:none;"></div>
     </div>
-
-    <!-- 拡張ビュー -->
-    <div id="extensionView" style="display:none;"></div>
   </main>
 </div>
 
 <script>
-  // ===== Brain（コアロジック）=====
-  class Brain {
-    constructor() {
-      this.memory = [];          // 直近の会話ログ（詳細）
-      this.archive = {           // 古い会話の統計
-        tokenFreq: {},           // 単語 -> 累積頻度
-        totalUtterances: 0       // 圧縮に回した発話数
-      };
-      this.nextId = 1;           // 会話ID採番
-    }
-
-    tokenize(text) {
-      return text
-        .toLowerCase()
-        .replace(/[^a-z0-9ぁ-んァ-ン一-龠ー\s]/g, " ")
-        .split(/\s+/)
-        .filter(t => t.length > 0);
-    }
-
-    textToVector(text) {
-      const tokens = this.tokenize(text);
-      const vec = {};
-      for (const t of tokens) {
-        vec[t] = (vec[t] || 0) + 1;
-      }
-      return vec;
-    }
-
-    cosineSimilarity(a, b) {
-      let dot = 0;
-      let na = 0;
-      let nb = 0;
-
-      for (const k in a) {
-        const x = a[k];
-        na += x * x;
-        if (k in b) {
-          dot += x * b[k];
-        }
-      }
-      for (const k in b) {
-        const y = b[k];
-        nb += y * y;
-      }
-      if (na === 0 || nb === 0) return 0;
-      return dot / (Math.sqrt(na) * Math.sqrt(nb));
-    }
-
-    learn(userText, botText) {
-      const vec = this.textToVector(userText);
-      const item = {
-        id: this.nextId++,
-        user: userText,
-        bot: botText,
-        corrected: false,
-        ts: Date.now(),
-        vec
-      };
-      this.memory.push(item);
-      this.save();
-      return item.id;
-    }
-
-    learnCorrection(id, correctedBotText) {
-      const item = this.memory.find(m => m.id === id);
-      if (!item) return;
-      item.bot = correctedBotText;
-      item.corrected = true;
-      item.ts = Date.now();
-      this.save();
-    }
-
-    findNearestReply(userText) {
-      if (this.memory.length === 0) return null;
-      const v = this.textToVector(userText);
-      let best = null;
-      let bestScore = -1;
-      for (const m of this.memory) {
-        const sim = this.cosineSimilarity(v, m.vec);
-        let score = sim;
-        if (m.corrected) score += 0.1;
-        if (score > bestScore) {
-          bestScore = score;
-          best = m;
-        }
-      }
-      if (bestScore < 0.2) return null;
-      return best.bot;
-    }
-
-    reply(userText) {
-      if (userText.includes("疲れた")) {
-        return "疲れたのは分かるが、時間の方がお前に文句言いたいと思ってるぞ。";
-      }
-      if (userText.includes("やる気")) {
-        return "やる気は降ってこない。まず1行やれ、それが着火剤だ。";
-      }
-
-      const learned = this.findNearestReply(userText);
-      if (learned) return learned;
-
-      return "まだそのパターンは学習してない。お前が修正してくれれば次からは覚える。";
-    }
-
-    compress(maxKeep = 500) {
-      if (this.memory.length <= maxKeep) return;
-
-      const excess = this.memory.length - maxKeep;
-      const old = this.memory.slice(0, excess);
-      const keep = this.memory.slice(excess);
-
-      for (const m of old) {
-        const tokensUser = this.tokenize(m.user);
-        const tokensBot  = this.tokenize(m.bot);
-        const tokens = tokensUser.concat(tokensBot);
-        for (const tok of tokens) {
-          this.archive.tokenFreq[tok] = (this.archive.tokenFreq[tok] || 0) + 1;
-        }
-        this.archive.totalUtterances += 1;
-      }
-
-      this.memory = keep;
-      this.save();
-    }
-
-    toDataObject() {
-      return {
-        memory: this.memory,
-        archive: this.archive,
-        nextId: this.nextId
-      };
-    }
-
-    fromDataObject(data) {
-      this.memory  = Array.isArray(data.memory) ? data.memory : [];
-      this.archive = data.archive || { tokenFreq: {}, totalUtterances: 0 };
-      this.nextId  = typeof data.nextId === "number" ? data.nextId : 1;
-      this.save();
-    }
-
-    save() {
-      const data = this.toDataObject();
-      try {
-        localStorage.setItem("my_ai_brain", JSON.stringify(data));
-      } catch (e) {
-        console.error("保存エラー：", e);
-      }
-    }
-
-    load() {
-      const raw = localStorage.getItem("my_ai_brain");
-      if (!raw) return;
-      try {
-        const data = JSON.parse(raw);
-        this.fromDataObject(data);
-      } catch (e) {
-        console.error("ロードエラー：", e);
-      }
-    }
+  // ===== モデル登録まわり =====
+  window.aiModels = [];
+  function registerModel(def) {
+    // { id, name, description, createInstance(storageKey?) }
+    if (!def || !def.id || !def.name || !def.createInstance) return;
+    window.aiModels.push(def);
   }
+  window.registerModel = registerModel;
 
-  // ===== グローバル：Brain & 拡張登録 =====
-  const brain = new Brain();
-  brain.load();
-  window._brain = brain; // 拡張用
-
+  // ===== 拡張登録まわり =====
   window.aiExtensions = [];
   function registerExtension(ext) {
-    // { id, title, init(container, brain) } を期待
     if (!ext || !ext.id || !ext.title || !ext.init) return;
     window.aiExtensions.push(ext);
   }
   window.registerExtension = registerExtension;
 
-  // ===== HomeビューのUI =====
+  // ===== グローバル状態 =====
+  let brain = null;
+  let currentModelId = null;
+
   const userInput = document.getElementById("userInput");
   const chatLog = document.getElementById("chatLog");
   const correctionInput = document.getElementById("correctionInput");
   const statsDiv = document.getElementById("stats");
-
   const homeView = document.getElementById("homeView");
   const extView = document.getElementById("extensionView");
+  const modelSelect = document.getElementById("modelSelect");
+  const modelInfo = document.getElementById("modelInfo");
 
   let lastMessageId = null;
 
@@ -437,16 +368,68 @@
   }
 
   function updateStats() {
-    const mem = brain.memory.length;
-    const totalUtterances = brain.archive.totalUtterances;
-    const vocabSize = Object.keys(brain.archive.tokenFreq).length;
+    if (!brain) {
+      statsDiv.textContent = "モデル未選択";
+      return;
+    }
+    const mem = brain.memory ? brain.memory.length : 0;
+    const archive = brain.archive || { totalUtterances: 0, tokenFreq: {} };
+    const totalUtterances = archive.totalUtterances || 0;
+    const vocabSize = archive.tokenFreq ? Object.keys(archive.tokenFreq).length : 0;
     statsDiv.textContent =
-      `詳細ログ: ${mem} 件 / 圧縮済み発話: ${totalUtterances} / 圧縮側語彙数: ${vocabSize}`;
+      `モデル: ${currentModelId || "なし"} / 詳細ログ: ${mem} 件 / 圧縮済み発話: ${totalUtterances} / 圧縮側語彙数: ${vocabSize}`;
   }
-  updateStats();
-  window._updateStats = updateStats; // 拡張側からも呼べるように
+  window._updateStats = updateStats;
 
+  // ===== モデル切り替え =====
+  function rebuildModelSelect() {
+    modelSelect.innerHTML = "";
+    if (window.aiModels.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "モデルなし";
+      modelSelect.appendChild(opt);
+      modelInfo.textContent = "models/ にモデルJSを追加しろ。";
+      return;
+    }
+    window.aiModels.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.name;
+      modelSelect.appendChild(opt);
+    });
+  }
+
+  function switchModel(id) {
+    const def = window.aiModels.find(m => m.id === id);
+    if (!def) {
+      brain = null;
+      currentModelId = null;
+      window._brain = null;
+      updateStats();
+      modelInfo.textContent = "モデルが見つからない。";
+      return;
+    }
+    currentModelId = def.id;
+    // ストレージキーはモデルIDで区別
+    const storageKey = "my_ai_brain_" + def.id;
+    brain = def.createInstance(storageKey);
+    window._brain = brain;
+    modelInfo.textContent = def.description || "";
+    updateStats();
+  }
+
+  modelSelect.addEventListener("change", () => {
+    const id = modelSelect.value;
+    switchModel(id);
+  });
+
+  // ===== HomeのUIイベント =====
   document.getElementById("sendBtn").addEventListener("click", () => {
+    if (!brain) {
+      appendLog(`⚠️ <span class="msg-note">モデルが選択されていない。まず上でモデルを選べ。</span>`);
+      return;
+    }
     const text = userInput.value.trim();
     if (!text) return;
 
@@ -462,6 +445,7 @@
   });
 
   document.getElementById("applyCorrectionBtn").addEventListener("click", () => {
+    if (!brain) return;
     const corrected = correctionInput.value.trim();
     if (!corrected || lastMessageId == null) return;
 
@@ -472,7 +456,7 @@
     updateStats();
   });
 
-  // ===== ハンバーガー & メニュー =====
+  // ===== ハンバーガー／メニュー =====
   const sidebar = document.getElementById("sidebar");
   const menuToggle = document.getElementById("menuToggle");
   const extMenu = document.getElementById("extensionMenu");
@@ -497,20 +481,21 @@
     homeView.style.display = "none";
     extView.style.display = "";
     extView.innerHTML = "";
+    if (!brain) {
+      extView.innerHTML = `<div class="small">まずモデルを選べ。脳みそがないと拡張も何もない。</div>`;
+      return;
+    }
     ext.init(extView, brain);
   }
 
-  // 初期表示
   showHome();
 
-  // Homeメニュー
   document.querySelector('.menu-item[data-view="home"]').addEventListener("click", (e) => {
     setActiveMenuItem(e.currentTarget);
     showHome();
     sidebar.classList.remove("open");
   });
 
-  // 拡張メニュー生成
   function buildExtensionMenu() {
     extMenu.innerHTML = "";
     window.aiExtensions.forEach(ext => {
@@ -529,12 +514,25 @@
   window._buildExtensionMenu = buildExtensionMenu;
 </script>
 
-<!-- API拡張読み込み -->
+<!-- モデル群を読み込む：ここに新しい models/*.js を追加していく -->
+<script src="models/semantic_brain_v1.js"></script>
+<!-- 他にモデルを作ったら、たとえば
+<script src="models/simple_bow_v1.js"></script>
+みたいに足していけばいい -->
+
+<!-- API拡張類（前に作ったやつをそのまま） -->
 <script src="api/localDataManager.js"></script>
 <script src="api/webTrainer.js"></script>
+<script src="api/datasetUploader.js"></script>
+<script src="api/dataCatalog.js"></script>
 
 <script>
-  // 拡張読み込み後にメニュー構築
+  // モデル・拡張読み込み後の初期セットアップ
+  rebuildModelSelect();
+  if (window.aiModels.length > 0) {
+    modelSelect.value = window.aiModels[0].id;
+    switchModel(window.aiModels[0].id);
+  }
   if (window._buildExtensionMenu) {
     window._buildExtensionMenu();
   }
@@ -542,4 +540,3 @@
 
 </body>
 </html>
-
