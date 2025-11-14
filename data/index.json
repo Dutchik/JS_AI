@@ -1,0 +1,9 @@
+[
+  {
+    "id": "base_jp",
+    "label": "日本語・基礎対話セット",
+    "description": "挨拶・仕事・勉強・メンタル・習慣あたりのベース対話データ。",
+    "file": "base_jp_conversation.json",
+    "storage": "remote"
+  }
+]
