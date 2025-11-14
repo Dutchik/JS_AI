@@ -274,6 +274,15 @@
 </div>
 
 <script>
+
+  // ===== 口調スタイル（API拡張側から書き換え） =====
+  window.aiStyle = window.aiStyle || {
+    mode: "normal",
+    apply(text) {
+      return text;
+    }
+  };
+
   // ===== モデル登録 =====
   window.aiModels = [];
   function registerModel(def) {
@@ -379,23 +388,31 @@
 
   // ===== Home UI =====
   document.getElementById("sendBtn").addEventListener("click", () => {
-    if (!brain) {
-      appendLog(`⚠️ <span class="msg-note">モデルが選択されていない。まず上でモデルを選べ。</span>`);
-      return;
-    }
-    const text = userInput.value.trim();
-    if (!text) return;
+  if (!brain) {
+    appendLog(`⚠️ <span class="msg-note">モデルが選択されていない。まず上でモデルを選べ。</span>`);
+    return;
+  }
+  const text = userInput.value.trim();
+  if (!text) return;
 
-    const botText = brain.reply(text);
-    const id = brain.learn(text, botText);
-    lastMessageId = id;
+  // 学習用の素の返答
+  const rawBot = brain.reply(text);
 
-    appendLog(`🧑 <span class="msg-user">${escapeHtml(text)}</span>`);
-    appendLog(`🤖 <span class="msg-bot">${escapeHtml(botText)}</span>`);
+  // 表示用はスタイルAPIを通す
+  const styledBot = (window.aiStyle && typeof window.aiStyle.apply === "function")
+    ? window.aiStyle.apply(rawBot)
+    : rawBot;
 
-    userInput.value = "";
-    updateStats();
-  });
+  // 学習は生テキストで
+  const id = brain.learn(text, rawBot);
+  lastMessageId = id;
+
+  appendLog(`🧑 <span class="msg-user">${escapeHtml(text)}</span>`);
+  appendLog(`🤖 <span class="msg-bot">${escapeHtml(styledBot)}</span>`);
+
+  userInput.value = "";
+  updateStats();
+});
 
   document.getElementById("applyCorrectionBtn").addEventListener("click", () => {
     if (!brain) return;
